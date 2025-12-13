@@ -1560,37 +1560,70 @@ quiz_data = [
     
 ]
 
+import time
+import copy # 딥 카피를 위해 copy 모듈 사용
+
 # ==========================================
 # [퀴즈 실행 로직]
 # ==========================================
-def run_quiz(data):
-    print("="*60)
-    print(f"🚀 [파이썬 기초 Part 1] 문제 풀이 (Page 1 ~ 9)")
-    print(f"📄 총 {len(data)}문항")
-    print("="*60)
-    time.sleep(1)
-
-    score = 0
+def run_quiz_session(data, start_index=1, is_review=False):
+    """
+    실제 퀴즈 풀이를 진행하는 함수 (재활용을 위해 분리)
+    """
     total = len(data)
+    score = 0
     wrong_answers = []
 
-    for idx, item in enumerate(data, 1):
-        print(f"\n[문제 {idx}/{total}] {item['q']}")
+    # 시작 인덱스를 0부터 시작하는 리스트 인덱스로 변환
+    start_list_index = start_index - 1
+    
+    # 만약 재풀이라면, 인덱스 번호를 재조정하지 않음
+    if is_review:
+        print("\n🔄 [오답 노트] 틀린 문제 다시 풀기 시작합니다.")
+        # 재풀이는 잘못된 문제 번호만 담긴 리스트를 기반으로 하므로,
+        # 원본 인덱스 번호를 추적하는 로직이 필요합니다.
+        # 이 예시에서는 단순화를 위해 'data'에 이미 틀린 문제만 있다고 가정합니다.
+        
+        # 재풀이에서는 처음부터 다시 시작
+        start_list_index = 0
+        total = len(data)
+    else:
+        print(f"✅ {start_index}번 문제부터 시작합니다.")
+
+    # 퀴즈 루프 시작
+    for i in range(start_list_index, total):
+        item = data[i]
+        
+        # 원본 문제 번호를 추적 (재풀이 시에도 원래 번호를 보여주기 위함)
+        original_idx = item.get('original_idx', i + 1)
+        
+        print(f"\n[문제 {original_idx}/{total}] {item['q']}")
         
         for option in item['options']:
             print(f"  {option}")
 
         while True:
-            user_input = input("\n정답 입력 (a/b/c/d) > ").lower().strip()
+            # 명령어 안내를 추가
+            user_input = input("\n정답 입력 (a/b/c/d) 또는 [q, exit, s] > ").lower().strip()
             
             if user_input in ['exit', 'q']:
-                print("\n[퀴즈를 중단합니다]")
-                return
+                print("\n[퀴즈를 중단하고 현재 점수를 확인합니다]")
+                return score, total, wrong_answers, i + 1 # 현재 진행 상태 반환
             
+            if user_input in ['s', 'score']:
+                current_score = score
+                current_total = i - start_list_index + 1 # 현재까지 푼 문제 수
+                print("-" * 30)
+                print(f"⭐ 현재 점수: {current_score} / {current_total}")
+                if current_total > 0:
+                    print(f"📊 정답률: {(current_score/current_total)*100:.1f}%")
+                print("-" * 30)
+                continue # 점수 확인 후 다시 정답 입력 대기
+
             if user_input in ['a', 'b', 'c', 'd']:
                 break
             else:
-                print("⚠️ a, b, c, d 중 하나만 입력해주세요.")
+                print("⚠️ a, b, c, d 중 하나만 입력하거나, 명령어를 입력해주세요.")
         
         # 정답 체크
         if user_input == item['a']:
@@ -1598,18 +1631,89 @@ def run_quiz(data):
             score += 1
         else:
             print(f"❌ 틀렸습니다. 정답은 '{item['a']}' 입니다.")
-            wrong_answers.append(idx)
-        
+            
+            # 틀린 문제는 원본 데이터와 인덱스 번호를 저장하여 재풀이 목록에 추가
+            if not is_review:
+                # 딥 카피를 사용하여 원본 데이터 구조를 유지
+                wrong_item = copy.deepcopy(item)
+                wrong_item['original_idx'] = original_idx
+                wrong_answers.append(wrong_item)
+            
         time.sleep(0.3)
 
-    print("\n" + "="*60)
-    print(f"🏁 Part 1 완료! 점수: {score} / {total}")
-    if total > 0:
-        print(f"📊 정답률: {(score/total)*100:.1f}%")
+    return score, total, wrong_answers, total + 1 # 퀴즈 완료 시 반환
+
+def run_quiz(quiz_data):
+    print("="*60)
+    print(f"🚀 [파이썬 기초 Part 1] 문제 풀이 (Page 1 ~ 9)")
+    print(f"📄 총 {len(quiz_data)}문항")
+    print("="*60)
+    time.sleep(1)
+
+    # 1. 시작 번호 선택
+    while True:
+        try:
+            start_num_input = input(f"❓ 몇 번 문제(1 ~ {len(quiz_data)})부터 시작하시겠습니까? (기본값: 1) > ").strip()
+            if not start_num_input:
+                start_index = 1
+                break
+            start_index = int(start_num_input)
+            if 1 <= start_index <= len(quiz_data):
+                break
+            else:
+                print(f"⚠️ 1과 {len(quiz_data)} 사이의 숫자를 입력해주세요.")
+        except ValueError:
+            print("⚠️ 유효한 숫자를 입력해주세요.")
     
-    if wrong_answers:
-        print(f"📝 틀린 문제 번호: {wrong_answers}")
+    # 2. 퀴즈 실행
+    # total은 퀴즈를 중단했을 때를 대비하여 총 문제수를 따로 저장
+    initial_total = len(quiz_data) 
+    score, total_answered, wrong_list, last_index = run_quiz_session(quiz_data, start_index=start_index)
+    
+    # 3. 결과 및 다시 풀기 기능
+    
+    # 중단 여부 체크 (마지막 인덱스가 총 문제수보다 작으면 중단된 것)
+    is_interrupted = (last_index <= initial_total) 
+    
+    print("\n" + "="*60)
+    if is_interrupted:
+        print("⏸️ 퀴즈가 중단되었습니다.")
+        
+        # 중단 시에는 현재까지 푼 문제 수(total_answered)를 기준으로 계산
+        total_q_solved = total_answered # run_quiz_session에서 반환된 total_answered는 (i - start_list_index + 1)
+        
+    else:
+        print("🏁 Part 1 완료!")
+        total_q_solved = initial_total # 전체 문제를 다 푼 경우
+        
+    # 최종 결과 출력
+    print(f"✅ 최종 점수: {score} / {total_q_solved}")
+    if total_q_solved > 0:
+        print(f"📊 정답률: {(score/total_q_solved)*100:.1f}%")
+    
+    if wrong_list:
+        # 틀린 문제 번호만 추출해서 출력
+        wrong_idx_list = [item['original_idx'] for item in wrong_list]
+        print(f"📝 틀린 문제 번호: {wrong_idx_list}")
+        
+        # 4. 다시 풀기 기능
+        while True:
+            retry_input = input("\n🤔 틀린 문제만 다시 풀어보시겠습니까? (y/n) > ").lower().strip()
+            if retry_input == 'y':
+                # 틀린 문제만 모은 리스트(wrong_list)를 재풀이 함수에 전달
+                # 재풀이 시의 점수와 정답 목록은 별도로 관리하지 않고, 사용자 경험을 위해 분리하여 실행합니다.
+                run_quiz_session(wrong_list, is_review=True)
+                break
+            elif retry_input == 'n':
+                break
+            else:
+                print("⚠️ y 또는 n 을 입력해주세요.")
+
+    print("="*60)
+    print("👋 퀴즈를 종료합니다.")
     print("="*60)
 
+
 if __name__ == "__main__":
+
     run_quiz(quiz_data)
