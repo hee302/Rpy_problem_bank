@@ -1,4 +1,5 @@
 import time
+import random # 랜덤 선택을 위해 random 모듈 추가
 
 # ==========================================================
 # [문제 데이터베이스: 파이썬 기초 Part 1 (Page 1 ~ 9)]
@@ -108,25 +109,60 @@ def run_quiz(quiz_data):
     print("="*60)
     time.sleep(1)
 
-    # 1. 시작 번호 선택
+    full_quiz_data = quiz_data
+    max_q = len(full_quiz_data)
+    
+    quiz_data_to_use = []
+    initial_total = 0
+    start_index = 1
+    
+    # 1. 풀이할 문제 개수 선택 및 랜덤 모드 결정
     while True:
         try:
-            start_num_input = input(f"❓ 몇 번 문제(1 ~ {len(quiz_data)})부터 시작하시겠습니까? (기본값: 1) > ").strip()
-            if not start_num_input:
-                start_index = 1
+            count_input = input(f"❓ 총 몇 문제(1 ~ {max_q}개)를 푸시겠습니까? (전체 풀이: Enter) > ").strip()
+            
+            if not count_input:
+                # 전체 문제 풀이 선택 (기존 순서대로)
+                
+                # 1-1. 시작 번호 선택 (기존 로직 유지)
+                while True:
+                    try:
+                        start_num_input = input(f"❓ 몇 번 문제(1 ~ {max_q})부터 시작하시겠습니까? (기본값: 1) > ").strip()
+                        if not start_num_input:
+                            start_index = 1
+                            break
+                        start_index = int(start_num_input)
+                        if 1 <= start_index <= max_q:
+                            break
+                        else:
+                            print(f"⚠️ 1과 {max_q} 사이의 숫자를 입력해주세요.")
+                    except ValueError:
+                        print("⚠️ 유효한 숫자를 입력해주세요.")
+                
+                quiz_data_to_use = full_quiz_data
+                initial_total = max_q
                 break
-            start_index = int(start_num_input)
-            if 1 <= start_index <= len(quiz_data):
+            
+            num_to_solve = int(count_input)
+            
+            if 1 <= num_to_solve <= max_q:
+                # 랜덤 문제 풀이 선택
+                
+                # random.sample을 사용하여 N개의 문제를 무작위로 추출
+                quiz_data_to_use = random.sample(full_quiz_data, num_to_solve)
+                
+                initial_total = len(quiz_data_to_use)
+                start_index = 1 # 랜덤 모드에서는 항상 1번부터 시작
+                print(f"\n✨ {initial_total}개의 랜덤 문제를 준비했습니다. (순서대로 1번부터 시작)")
                 break
             else:
-                print(f"⚠️ 1과 {len(quiz_data)} 사이의 숫자를 입력해주세요.")
+                print(f"⚠️ 1과 {max_q} 사이의 숫자를 입력해주세요.")
         except ValueError:
             print("⚠️ 유효한 숫자를 입력해주세요.")
-    
+            
     # 2. 퀴즈 실행
     # total은 퀴즈를 중단했을 때를 대비하여 총 문제수를 따로 저장
-    initial_total = len(quiz_data) 
-    score, total_answered, wrong_list, last_index = run_quiz_session(quiz_data, start_index=start_index)
+    score, total_answered, wrong_list, last_index = run_quiz_session(quiz_data_to_use, start_index=start_index)
     
     # 3. 결과 및 다시 풀기 기능
     
@@ -138,7 +174,7 @@ def run_quiz(quiz_data):
         print("⏸️ 퀴즈가 중단되었습니다.")
         
         # 중단 시에는 현재까지 푼 문제 수(total_answered)를 기준으로 계산
-        total_q_solved = total_answered # run_quiz_session에서 반환된 total_answered는 (i - start_list_index + 1)
+        total_q_solved = total_answered 
         
     else:
         print("🏁 Part 1 완료!")
@@ -159,7 +195,7 @@ def run_quiz(quiz_data):
             retry_input = input("\n🤔 틀린 문제만 다시 풀어보시겠습니까? (y/n) > ").lower().strip()
             if retry_input == 'y':
                 # 틀린 문제만 모은 리스트(wrong_list)를 재풀이 함수에 전달
-                # 재풀이 시의 점수와 정답 목록은 별도로 관리하지 않고, 사용자 경험을 위해 분리하여 실행합니다.
+                # 재풀이 시에는 랜덤이 아닌, 틀린 문제 리스트의 순서대로 진행됩니다.
                 run_quiz_session(wrong_list, is_review=True)
                 break
             elif retry_input == 'n':
@@ -174,4 +210,5 @@ def run_quiz(quiz_data):
 
 if __name__ == "__main__":
     quiz_data = load_quiz_data()
-    run_quiz(quiz_data)
+    if quiz_data:
+        run_quiz(quiz_data)
