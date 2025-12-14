@@ -1,6 +1,6 @@
 # 🎓 R-Py 문제은행 풀이 프로그램
 
-** R과 python 관련 문제를 제공하는 CLI(Command Line Interface) 기반의 문제 풀이 프로그램입니다.  
+R과 python 관련 문제를 제공하는 CLI(Command Line Interface) 기반의 문제 풀이 프로그램입니다.  
 방대한 문제은행 데이터를 효율적으로 학습할 수 있도록 **랜덤 모의고사** 기능과 **순차 학습** 기능을 모두 제공합니다.
 
 ---
